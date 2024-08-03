@@ -5,10 +5,154 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="./style/style.css">
-  <title>Home</title>
+  <title>Dashboard</title>
 </head>
 <body>
-  <header></header>
- 
+  <header>
+    <a href="#" id="header-link"><h1>FakestoreAPI: Users</h1></a>
+  </header>
+  <div class="dashboard">
+    <nav class="sidebar">
+      <ul>
+        <li><a href="#" data-target="get-all">Busca global</a></li>
+        <li><a href="#" data-target="get-single">Busca única</a></li>
+        <li><a href="#" data-target="limit-results">Busca limitada</a></li>
+        <li><a href="#" data-target="sort-results">Busca filtrada</a></li>
+        <li><a href="#" data-target="add">Adicionar usuário</a></li>
+        <li><a href="#" data-target="update">Atualizar usuário</a></li>
+        <li><a href="#" data-target="delete">Deletar usuário</a></li>
+      </ul>
+    </nav>
+    <main class="content">
+      <div id="default" class="content-section active">
+        <div class="card">
+          <h2>Selecione um método para continuar</h2>
+          <p>Por: Geovanne e Maria Eduarda Silva G.</p>
+        </div>
+      </div>
+      <div id="get-all" class="content-section">
+        <div class="card">
+          <h2>Buscar todos os usuários</h2>
+          <p>Buscar todos os usuários</p>
+          <div class="code-block">
+            <pre><code>
+fetch('https://fakestoreapi.com/users')
+  .then(res => res.json())
+  .then(json => console.log(json))
+            </code></pre>
+          </div>
+          <button id="fetch-users" class="fetch-button">
+            <span class="button-text">Buscar</span>
+            <span class="loading-text">Buscando</span>
+          </button> 
+          <div id="users-container" class="users-container"></div>
+        </div>
+      </div>        
+      <div id="get-single" class="content-section">
+        <div class="card">
+          <h2>Buscar um unico usuário</h2>
+          <p>Entre com o ID para buscar o usuário</p>
+          <div class="code-block">
+            <pre><code>
+      fetch('https://fakestoreapi.com/users/{id}')
+        .then(res => res.json())
+        .then(json => console.log(json))
+            </code></pre>
+          </div>
+          <input type="text" id="user-id" placeholder="Insira o ID do usuário" />
+          <button id="fetchUnicoButton" class="fetch-button">
+            <span class="button-text">Buscar</span>
+            <span class="loading-text">Buscando</span>
+          </button>
+          <div id="single-user-container" class="users-container"></div>
+        </div>
+      </div>
+      
+      <div id="limit-results" class="content-section">
+        <div class="card">
+          <h2>Busca limitada</h2>
+          <p>Busca até o número máximo que voce inseriu</p>
+          <input type="number" id="limit-count" placeholder="Número de resultados" />
+          <button id="fetch-limited-users" class="fetch-button">
+            <span class="button-text">Buscar</span>
+            <span class="loading-text">Buscando</span>
+          </button>
+          <div id="limited-users-container" class="users-container"></div>
+        </div>
+      </div>      
+      <div id="sort-results" class="content-section">
+        <div class="card">
+          <h2>Ordenar Resultados</h2>
+          <p>Selecione o metodo de ordem que o ID será ordenado.</p>
+          <select id="sort-order">
+            <option value="asc">Ordem Crescente</option>
+            <option value="desc">Ordem Decrescente</option>
+          </select>
+          <button id="sort-results-button" class="fetch-button">
+            <span class="button-text">Buscar</span>
+            <span class="loading-text">Buscando</span>
+          </button>
+          <div id="results-container" class="users-container"></div>
+        </div>
+      </div>
+      
+      
+      <div id="add" class="content-section">
+        <div class="card">
+          <h2>Adicionar um novo usuário</h2>
+          <p>Insira as informaçoes para adicionar um novo usuário.</p>
+          <form id="add-user-form">
+            <input type="text" id="add-username" placeholder="Nome de usuário" required />
+            <input type="text" id="add-firstname" placeholder="Primeiro nome" required />
+            <input type="text" id="add-lastname" placeholder="Sobrenome" required />
+            <input type="email" id="add-email" placeholder="Email" required />
+            <input type="password" id="add-password" placeholder="Senha" />
+            <input type="text" id="add-phone" placeholder="Telefone" />
+            <input type="text" id="add-address" placeholder="Endereço (rua, cidade)" />
+            <input type="number" id="add-number" placeholder="Número" />
+            <input type="text" id="add-zipcode" placeholder="CEP" />
+            <input type="text" id="add-lat" placeholder="Latitude" />
+            <input type="text" id="add-long" placeholder="Longitude" />
+            <button type="submit" id="add-user" class="fetch-button">
+              <span class="button-text">Adicionar</span>
+              <span class="loading-text">Adicionando</span>
+            </button>
+          </form>
+          <div id="add-user-response" class="users-container"></div>
+        </div>
+      </div>      
+      
+      <div id="update" class="content-section">
+        <div class="card">
+          <h2>Atualizar um usuário</h2>
+          <p>Insira o ID para fazer a seleção, e depois os novos dados.</p>
+          <input type="text" id="update-id" placeholder="ID do usuário" />
+          <input type="text" id="update-username" placeholder="Nome de usuário" />
+          <input type="email" id="update-email" placeholder="Email" />
+          <input type="text" id="update-phone" placeholder="Telefone" />
+          <input type="text" id="update-address" placeholder="Endereço" />
+          <button id="update-user-button" class="fetch-button">
+            <span class="button-text">Atualizar</span>
+            <span class="loading-text">Atualizando</span>
+          </button>          
+          <div id="update-user-response" class="users-container"></div>
+        </div>
+      </div>      
+      <div id="delete" class="content-section">
+        <div class="card">
+          <h2>Deletar um usuário</h2>
+          <p>Insira o ID para realizar o DELETE</p>
+          <input type="text" id="delete-id" placeholder="ID do usuário" />
+          <button id="delete-user-button" class="fetch-button">
+            <span class="button-text">Deletar</span>
+            <span class="loading-text">Deletando</span>
+          </button>
+          <div id="delete-user-response" class="users-container"></div>
+        </div>
+      </div>
+      
+    </main>    
+  </div>
+  <script src="./script/script.js" type="module"></script>
 </body>
-  </html>
+</html>
