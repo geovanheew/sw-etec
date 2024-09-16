@@ -30,7 +30,6 @@ class Cliente {
         $this->dataNascimento = $dataNascimento_informada;
     }
 
-
     // Método para obter um cliente pelo ID
     public function get($id) {
         $mysqli = Conectar();
@@ -39,25 +38,35 @@ class Cliente {
         $stmt->execute();
         $resultado = $stmt->get_result();
         $cliente = $resultado->fetch_assoc();
-
-        if ($cliente) {
-            $this->id = $cliente['ID'];
-            $this->nome = $cliente['Nome'];
-            $this->endereco = $cliente['Endereco'];
-            $this->cpf = $cliente['CPF'];
-            $this->telefone = $cliente['Telefone'];
-            $this->email = $cliente['Email'];
-            $this->dataNascimento = $cliente['DataNascimento'];
-        }
-
+    
         $stmt->close();
         $mysqli->close();
+    
+        if ($cliente) {
+            return $cliente; // Retorne os dados do cliente
+        } else {
+            return null; // Retorne null se não encontrar o cliente
+        }
     }
 
+    // Método para obter todos os clientes
+    public function getAll() {
+        $mysqli = Conectar();
+        $stmt = $mysqli->prepare("SELECT * FROM Clientes");
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+        $clientes = $resultado->fetch_all(MYSQLI_ASSOC);
+    
+        $stmt->close();
+        $mysqli->close();
+    
+        return $clientes; // Retorne todos os dados dos clientes
+    }
+    
     // Método para adicionar um cliente
     public function post() {
         $mysqli = Conectar();
-        $stmt = $mysqli->prepare("INSERT INTO cliente (nome, endereco, cpf, telefone, email, data_nascimento) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt = $mysqli->prepare("INSERT INTO Clientes (nome, endereco, cpf, telefone, email, data_nascimento) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param('ssssss', $this->nome, $this->endereco, $this->cpf, $this->telefone, $this->email, $this->dataNascimento);
         $stmt->execute();
         $this->id = $mysqli->insert_id; // Define o ID gerado após o INSERT

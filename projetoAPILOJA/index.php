@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_URI'] == "C:\\Windows") {
 
 $resposta = [
     'End points:' => [
-        
+        "Cliente:" => '/sw-etec/projetoAPILOJA/Controller/controllerCliente.php?id=1'
     ],
     'Server Info:' => [
         'Método de requisição:' => $_SERVER['REQUEST_METHOD'],
