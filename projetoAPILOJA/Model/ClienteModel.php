@@ -34,20 +34,20 @@ class Cliente {
     // Método para obter um cliente pelo ID
     public function get($id) {
         $mysqli = Conectar();
-        $stmt = $mysqli->prepare("SELECT * FROM cliente WHERE id = ?");
+        $stmt = $mysqli->prepare("SELECT * FROM Clientes WHERE id = ?");
         $stmt->bind_param('i', $id);
         $stmt->execute();
         $resultado = $stmt->get_result();
         $cliente = $resultado->fetch_assoc();
 
         if ($cliente) {
-            $this->id = $cliente['id'];
-            $this->nome = $cliente['nome'];
-            $this->endereco = $cliente['endereco'];
-            $this->cpf = $cliente['cpf'];
-            $this->telefone = $cliente['telefone'];
-            $this->email = $cliente['email'];
-            $this->dataNascimento = $cliente['data_nascimento'];
+            $this->id = $cliente['ID'];
+            $this->nome = $cliente['Nome'];
+            $this->endereco = $cliente['Endereco'];
+            $this->cpf = $cliente['CPF'];
+            $this->telefone = $cliente['Telefone'];
+            $this->email = $cliente['Email'];
+            $this->dataNascimento = $cliente['DataNascimento'];
         }
 
         $stmt->close();
