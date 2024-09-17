@@ -5,21 +5,48 @@ header('Content-Type: application/json');
 require_once '../Model/ClienteModel.php';
 require_once '../Model/Utilidades/Resposta.php';
 
-// Início da sessão
+// Função para converter as chaves do array para minúsculas
+function arrayKeysToLower($array) {
+    $result = [];
+    foreach ($array as $key => $value) {
+        if (is_array($value)) {
+            $result[strtolower($key)] = arrayKeysToLower($value);
+        } else {
+            $result[strtolower($key)] = $value;
+        }
+    }
+    return $result;
+}
 
+// Função para obter o ID da URL ou do corpo da requisição
+function getIdFromRequest() {
+    global $input;
+    $id = isset($_GET['id']) ? intval($_GET['id']) : null;
+    if (!$id && isset($input['id']) && is_numeric($input['id'])) {
+        $id = intval($input['id']);
+    }
+    return $id;
+}
+
+// Lê o corpo da requisição e converte as chaves para minúsculas
+$input = json_decode(file_get_contents('php://input'), true);
+$input = arrayKeysToLower($input);
+
+// Início da sessão
 switch ($_SERVER['REQUEST_METHOD']) {
     case "GET":
+        $id = getIdFromRequest();
         $cliente = new Cliente();
-        if (isset($_GET['id'])) {
-            $id = htmlspecialchars($_GET['id']);
-            $clienteData = $cliente->get($id); // Presumindo que `get` retorna dados do cliente como um array
+        
+        if ($id) {
+            $clienteData = $cliente->get($id);
 
             if ($clienteData) {
                 $retorno = [
-                    'Clientes' => [$clienteData], // Coloca o cliente em um array para manter a consistência
+                    'Clientes' => [$clienteData],
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true) // Usa json_decode para obter um array associativo
+                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
                     ]
                 ];
             } else {
@@ -27,19 +54,19 @@ switch ($_SERVER['REQUEST_METHOD']) {
                     'Clientes' => [],
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true) // Código 404 para não encontrado
+                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true)
                     ]
                 ];
             }
         } else {
-            $clientesData = $cliente->getAll(); // Obtém todos os clientes
+            $clientesData = $cliente->getAll();
 
             if (!empty($clientesData)) {
                 $retorno = [
-                    'Clientes' => $clientesData, // Coloca todos os clientes em um array
+                    'Clientes' => $clientesData,
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true) // Código 200 para OK
+                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
                     ]
                 ];
             } else {
@@ -47,7 +74,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
                     'Clientes' => [],
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true) // Código 404 para não encontrado
+                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true)
                     ]
                 ];
             }
@@ -56,19 +83,139 @@ switch ($_SERVER['REQUEST_METHOD']) {
         break;
 
     case "POST":
-        // Implementar POST aqui
+        // Verifica se os dados esperados estão presentes
+        if (isset($input['nome']) && isset($input['endereco']) && isset($input['cpf']) && isset($input['telefone']) && isset($input['email']) && isset($input['datanascimento'])) {
+            $cliente = new Cliente(
+                null,
+                htmlspecialchars($input['nome']),
+                htmlspecialchars($input['endereco']),
+                htmlspecialchars($input['cpf']),
+                htmlspecialchars($input['telefone']),
+                htmlspecialchars($input['email']),
+                htmlspecialchars($input['datanascimento'])
+            );
+
+            $cliente->post();
+
+            $retorno = [
+                'Clientes' => [
+                    'id' => $cliente->id,
+                    'nome' => $cliente->nome,
+                    'endereco' => $cliente->endereco,
+                    'cpf' => $cliente->cpf,
+                    'telefone' => $cliente->telefone,
+                    'email' => $cliente->email,
+                    'dataNascimento' => $cliente->dataNascimento
+                ],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(201)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(201); // Define o código de resposta HTTP para criação
+        } else {
+            $retorno = [
+                'Clientes' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400); // Define o código de resposta HTTP para solicitação inválida
+        }
+
+        echo json_encode($retorno, JSON_PRETTY_PRINT);
         break;
 
     case "PUT":
-        // Implementar PUT aqui
+        $id = getIdFromRequest();
+        if ($id <= 0) {
+            $retorno = [
+                'Clientes' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400);
+            echo json_encode($retorno, JSON_PRETTY_PRINT);
+            break;
+        }
+
+        // Verifica se os dados esperados estão presentes
+        if (isset($input['nome']) && isset($input['endereco']) && isset($input['cpf']) && isset($input['telefone']) && isset($input['email']) && isset($input['datanascimento'])) {
+            $cliente = new Cliente(
+                $id,
+                htmlspecialchars($input['nome']),
+                htmlspecialchars($input['endereco']),
+                htmlspecialchars($input['cpf']),
+                htmlspecialchars($input['telefone']),
+                htmlspecialchars($input['email']),
+                htmlspecialchars($input['datanascimento'])
+            );
+
+            $cliente->update();
+
+            $retorno = [
+                'Clientes' => [
+                    'id' => $cliente->id,
+                    'nome' => $cliente->nome,
+                    'endereco' => $cliente->endereco,
+                    'cpf' => $cliente->cpf,
+                    'telefone' => $cliente->telefone,
+                    'email' => $cliente->email,
+                    'dataNascimento' => $cliente->dataNascimento
+                ],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(200);
+        } else {
+            $retorno = [
+                'Clientes' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400);
+        }
+
+        echo json_encode($retorno, JSON_PRETTY_PRINT);
         break;
 
     case "PATCH":
-        // Implementar PATCH aqui
-        break;
+        $id = getIdFromRequest();
+        if ($id) {
+            $cliente = new Cliente($id);
+            
+            $cliente->toggleStatus();
+            
+            $retorno = [
+                'Clientes' => [
+                    'id' => $cliente->id,
+                    'status' => $cliente->status
+                ],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(200);
+        } else {
+            $retorno = [
+                'Clientes' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400);
+        }
 
-    case "DELETE":
-        // Implementar DELETE aqui
+        echo json_encode($retorno, JSON_PRETTY_PRINT);
         break;
 
     default:

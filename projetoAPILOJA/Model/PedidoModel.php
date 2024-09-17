@@ -3,36 +3,36 @@
 require_once('../Controller/DAO/Conectar.php');
 
 class Pedido {
-    public $id;
-    public $cliente_id;
-    public $data_pedido;
-    public $status_pedido;
+    public $id_pedido;
+    public $id_cliente;
+    public $data;
+    public $status; // Presumindo que a coluna status é opcional e pode ser usada em outros contextos
 
-    // Construtor da classe Pedido
+    // Construtor
     public function __construct(
-        $id = null,
-        $cliente_id = null,
-        $data_pedido = null,
-        $status_pedido = null
+        $id_pedido_informado = null,
+        $id_cliente_informado = null,
+        $data_informada = null,
+        $status_informado = null
     ) {
-        $this->id = $id;
-        $this->cliente_id = $cliente_id;
-        $this->data_pedido = $data_pedido;
-        $this->status_pedido = $status_pedido;
+        $this->id_pedido = $id_pedido_informado;
+        $this->id_cliente = $id_cliente_informado;
+        $this->data = $data_informada;
+        $this->status = $status_informado; // Manter a propriedade status mesmo que não esteja na tabela
     }
 
     // Método para obter um pedido pelo ID
-    public function get($id) {
+    public function get($id_pedido) {
         $mysqli = Conectar();
         $stmt = $mysqli->prepare("SELECT * FROM Pedidos WHERE id_pedido = ?");
-        $stmt->bind_param('i', $id);
+        $stmt->bind_param('i', $id_pedido);
         $stmt->execute();
         $resultado = $stmt->get_result();
         $pedido = $resultado->fetch_assoc();
-
+    
         $stmt->close();
         $mysqli->close();
-
+    
         if ($pedido) {
             return $pedido; // Retorne os dados do pedido
         } else {
@@ -47,43 +47,66 @@ class Pedido {
         $stmt->execute();
         $resultado = $stmt->get_result();
         $pedidos = $resultado->fetch_all(MYSQLI_ASSOC);
-
+    
         $stmt->close();
         $mysqli->close();
-
-        return $pedidos; // Retorne todos os pedidos
+    
+        return $pedidos; // Retorne todos os dados dos pedidos
     }
-
+    
     // Método para adicionar um pedido
     public function post() {
         $mysqli = Conectar();
-        $stmt = $mysqli->prepare("INSERT INTO pedidos (cliente_id, data_pedido, status_pedido) VALUES (?, ?, ?)");
-        $stmt->bind_param('iss', $this->cliente_id, $this->data_pedido, $this->status_pedido);
+        $stmt = $mysqli->prepare("INSERT INTO Pedidos (id_cliente, data) VALUES (?, ?)");
+        $stmt->bind_param('is', $this->id_cliente, $this->data);
         $stmt->execute();
-        $this->id = $mysqli->insert_id; // Define o ID gerado após o INSERT
+        $this->id_pedido = $mysqli->insert_id; // Define o ID gerado após o INSERT
 
         $stmt->close();
         $mysqli->close();
     }
 
-    // Método para atualizar um pedido
-    public function put() {
+    public function update() {
         $mysqli = Conectar();
-        $stmt = $mysqli->prepare("UPDATE pedidos SET cliente_id = ?, data_pedido = ?, status_pedido = ? WHERE id_pedido = ?");
-        $stmt->bind_param('issi', $this->cliente_id, $this->data_pedido, $this->status_pedido, $this->id);
+        
+        $stmt = $mysqli->prepare("UPDATE Pedidos SET id_cliente = ?, data = ? WHERE id_pedido = ?");
+        $stmt->bind_param('isi', $this->id_cliente, $this->data, $this->id_pedido);
         $stmt->execute();
-
+        
         $stmt->close();
         $mysqli->close();
     }
-
-    // Método para deletar um pedido
-    public function delete($id) {
+    
+    public function toggleStatus() {
         $mysqli = Conectar();
-        $stmt = $mysqli->prepare("DELETE FROM pedidos WHERE id_pedido = ?");
-        $stmt->bind_param('i', $id);
+        
+        // Primeiro, obtenha o status atual do pedido
+        $stmt = $mysqli->prepare("SELECT status FROM Pedidos WHERE id_pedido = ?");
+        $stmt->bind_param('i', $this->id_pedido);
         $stmt->execute();
-
+        $result = $stmt->get_result();
+        $pedido = $result->fetch_assoc();
+        
+        if ($pedido) {
+            // Alterna o status baseado no valor atual
+            $newStatus = ($pedido['status'] == 0) ? 1 : 0;
+            
+            // Atualiza o status
+            $stmt = $mysqli->prepare("UPDATE Pedidos SET status = ? WHERE id_pedido = ?");
+            $stmt->bind_param('ii', $newStatus, $this->id_pedido);
+            $stmt->execute();
+            
+            // Recarrega os dados do pedido após a atualização
+            $stmt = $mysqli->prepare("SELECT * FROM Pedidos WHERE id_pedido = ?");
+            $stmt->bind_param('i', $this->id_pedido);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $pedido = $result->fetch_assoc();
+            
+            // Atualiza as propriedades do objeto Pedido
+            $this->status = $pedido['status'];
+        }
+        
         $stmt->close();
         $mysqli->close();
     }

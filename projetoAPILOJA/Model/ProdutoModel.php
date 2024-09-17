@@ -1,8 +1,8 @@
 <?php
 
-require_once('../Controller/DAO/Conectar.php');
+require_once ('../Controller/DAO/Conectar.php');
 
-class Produto {
+class Product {
     public $id;
     public $nome;
     public $descricao;
@@ -12,25 +12,25 @@ class Produto {
     public $validade;
     public $status;
 
-    // Construtor da classe Produto
+    // Construtor
     public function __construct(
-        $id = null,
-        $nome = null,
-        $descricao = null,
-        $qtd = null,
-        $marca = null,
-        $preco = null,
-        $validade = null,
-        $status = null
+        $id_informado = null,
+        $nome_informado = null,
+        $descricao_informada = null,
+        $qtd_informada = null,
+        $marca_informada = null,
+        $preco_informado = null,
+        $validade_informada = null,
+        $status_informado = null
     ) {
-        $this->id = $id;
-        $this->nome = $nome;
-        $this->descricao = $descricao;
-        $this->qtd = $qtd;
-        $this->marca = $marca;
-        $this->preco = $preco;
-        $this->validade = $validade;
-        $this->status = $status;
+        $this->id = $id_informado;
+        $this->nome = $nome_informado;
+        $this->descricao = $descricao_informada;
+        $this->qtd = $qtd_informada;
+        $this->marca = $marca_informada;
+        $this->preco = $preco_informado;
+        $this->validade = $validade_informada;
+        $this->status = $status_informado;
     }
 
     // Método para obter um produto pelo ID
@@ -41,10 +41,10 @@ class Produto {
         $stmt->execute();
         $resultado = $stmt->get_result();
         $produto = $resultado->fetch_assoc();
-
+    
         $stmt->close();
         $mysqli->close();
-
+    
         if ($produto) {
             return $produto; // Retorne os dados do produto
         } else {
@@ -59,18 +59,18 @@ class Produto {
         $stmt->execute();
         $resultado = $stmt->get_result();
         $produtos = $resultado->fetch_all(MYSQLI_ASSOC);
-
+    
         $stmt->close();
         $mysqli->close();
-
-        return $produtos; // Retorne todos os produtos
+    
+        return $produtos; // Retorne todos os dados dos produtos
     }
-
+    
     // Método para adicionar um produto
     public function post() {
         $mysqli = Conectar();
-        $stmt = $mysqli->prepare("INSERT INTO Produtos (nome, descricao, qtd, marca, preco, validade, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param('ssissss', $this->nome, $this->descricao, $this->qtd, $this->marca, $this->preco, $this->validade, $this->status);
+        $stmt = $mysqli->prepare("INSERT INTO Produtos (Nome, Descricao, QTD, Marca, Preco, Validade) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param('ssisss', $this->nome, $this->descricao, $this->qtd, $this->marca, $this->preco, $this->validade);
         $stmt->execute();
         $this->id = $mysqli->insert_id; // Define o ID gerado após o INSERT
 
@@ -78,26 +78,48 @@ class Produto {
         $mysqli->close();
     }
 
-    // Método para atualizar um produto
-    public function put() {
+    public function update() {
         $mysqli = Conectar();
-        $stmt = $mysqli->prepare("UPDATE Produtos SET nome = ?, descricao = ?, qtd = ?, marca = ?, preco = ?, validade = ?, status = ? WHERE ID = ?");
-        $stmt->bind_param('ssissssi', $this->nome, $this->descricao, $this->qtd, $this->marca, $this->preco, $this->validade, $this->status, $this->id);
+    
+        $stmt = $mysqli->prepare("UPDATE Produtos SET Nome = ?, Descricao = ?, QTD = ?, Marca = ?, Preco = ?, Validade = ? WHERE ID = ?");
+        $stmt->bind_param('ssisssi', $this->nome, $this->descricao, $this->qtd, $this->marca, $this->preco, $this->validade, $this->id);
         $stmt->execute();
-
+    
         $stmt->close();
         $mysqli->close();
     }
-
-    // Método para deletar um produto
-    public function delete($id) {
+    
+    public function toggleStatus() {
         $mysqli = Conectar();
-        $stmt = $mysqli->prepare("DELETE FROM Produtos WHERE ID = ?");
-        $stmt->bind_param('i', $id);
+        
+        // Primeiro, obtenha o status atual do produto
+        $stmt = $mysqli->prepare("SELECT status FROM Produtos WHERE ID = ?");
+        $stmt->bind_param('i', $this->id);
         $stmt->execute();
-
+        $result = $stmt->get_result();
+        $produto = $result->fetch_assoc();
+        
+        if ($produto) {
+            // Alterna o status baseado no valor atual
+            $newStatus = ($produto['status'] == 0) ? 1 : 0;
+            
+            // Atualiza o status
+            $stmt = $mysqli->prepare("UPDATE Produtos SET status = ? WHERE ID = ?");
+            $stmt->bind_param('ii', $newStatus, $this->id);
+            $stmt->execute();
+            
+            // Recarrega os dados do produto após a atualização
+            $stmt = $mysqli->prepare("SELECT * FROM Produtos WHERE ID = ?");
+            $stmt->bind_param('i', $this->id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $produto = $result->fetch_assoc();
+            
+            // Atualiza as propriedades do objeto Product
+            $this->status = $produto['status'];
+        }
+        
         $stmt->close();
         $mysqli->close();
     }
 }
-?>

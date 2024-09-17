@@ -5,21 +5,48 @@ header('Content-Type: application/json');
 require_once '../Model/ProdutoModel.php';
 require_once '../Model/Utilidades/Resposta.php';
 
-// Início da sessão
+// Função para converter as chaves do array para minúsculas
+function arrayKeysToLower($array) {
+    $result = [];
+    foreach ($array as $key => $value) {
+        if (is_array($value)) {
+            $result[strtolower($key)] = arrayKeysToLower($value);
+        } else {
+            $result[strtolower($key)] = $value;
+        }
+    }
+    return $result;
+}
 
+// Função para obter o ID da URL ou do corpo da requisição
+function getIdFromRequest() {
+    global $input;
+    $id = isset($_GET['id']) ? intval($_GET['id']) : null;
+    if (!$id && isset($input['id']) && is_numeric($input['id'])) {
+        $id = intval($input['id']);
+    }
+    return $id;
+}
+
+// Lê o corpo da requisição e converte as chaves para minúsculas
+$input = json_decode(file_get_contents('php://input'), true);
+$input = arrayKeysToLower($input);
+
+// Início da sessão
 switch ($_SERVER['REQUEST_METHOD']) {
     case "GET":
-        $produto = new Produto();
-        if (isset($_GET['id'])) {
-            $id = htmlspecialchars($_GET['id']);
-            $produtoData = $produto->get($id); // Presumindo que `get` retorna dados do produto como um array
+        $id = getIdFromRequest();
+        $product = new Product();
+        
+        if ($id) {
+            $productData = $product->get($id);
 
-            if ($produtoData) {
+            if ($productData) {
                 $retorno = [
-                    'Produtos' => [$produtoData], // Coloca o produto em um array para manter a consistência
+                    'Produtos' => [$productData],
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true) // Código 200 para OK
+                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
                     ]
                 ];
             } else {
@@ -27,19 +54,19 @@ switch ($_SERVER['REQUEST_METHOD']) {
                     'Produtos' => [],
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true) // Código 404 para não encontrado
+                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true)
                     ]
                 ];
             }
         } else {
-            $produtosData = $produto->getAll(); // Obtém todos os produtos
+            $productsData = $product->getAll();
 
-            if (!empty($produtosData)) {
+            if (!empty($productsData)) {
                 $retorno = [
-                    'Produtos' => $produtosData, // Coloca todos os produtos em um array
+                    'Produtos' => $productsData,
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true) // Código 200 para OK
+                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
                     ]
                 ];
             } else {
@@ -47,7 +74,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
                     'Produtos' => [],
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true) // Código 404 para não encontrado
+                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true)
                     ]
                 ];
             }
@@ -56,19 +83,139 @@ switch ($_SERVER['REQUEST_METHOD']) {
         break;
 
     case "POST":
-        // Implementar POST aqui
+        // Verifica se os dados esperados estão presentes
+        if (isset($input['nome']) && isset($input['descricao']) && isset($input['qtd']) && isset($input['marca']) && isset($input['preco']) && isset($input['validade'])) {
+            $product = new Product(
+                null,
+                htmlspecialchars($input['nome']),
+                htmlspecialchars($input['descricao']),
+                intval($input['qtd']),
+                htmlspecialchars($input['marca']),
+                floatval($input['preco']),
+                htmlspecialchars($input['validade'])
+            );
+
+            $product->post();
+
+            $retorno = [
+                'Produtos' => [
+                    'id' => $product->id,
+                    'nome' => $product->nome,
+                    'descricao' => $product->descricao,
+                    'qtd' => $product->qtd,
+                    'marca' => $product->marca,
+                    'preco' => $product->preco,
+                    'validade' => $product->validade
+                ],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(201)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(201); // Define o código de resposta HTTP para criação
+        } else {
+            $retorno = [
+                'Produtos' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400); // Define o código de resposta HTTP para solicitação inválida
+        }
+
+        echo json_encode($retorno, JSON_PRETTY_PRINT);
         break;
 
     case "PUT":
-        // Implementar PUT aqui
+        $id = getIdFromRequest();
+        if ($id <= 0) {
+            $retorno = [
+                'Produtos' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400);
+            echo json_encode($retorno, JSON_PRETTY_PRINT);
+            break;
+        }
+
+        // Verifica se os dados esperados estão presentes
+        if (isset($input['nome']) && isset($input['descricao']) && isset($input['qtd']) && isset($input['marca']) && isset($input['preco']) && isset($input['validade'])) {
+            $product = new Product(
+                $id,
+                htmlspecialchars($input['nome']),
+                htmlspecialchars($input['descricao']),
+                intval($input['qtd']),
+                htmlspecialchars($input['marca']),
+                floatval($input['preco']),
+                htmlspecialchars($input['validade'])
+            );
+
+            $product->update();
+
+            $retorno = [
+                'Produtos' => [
+                    'id' => $product->id,
+                    'nome' => $product->nome,
+                    'descricao' => $product->descricao,
+                    'qtd' => $product->qtd,
+                    'marca' => $product->marca,
+                    'preco' => $product->preco,
+                    'validade' => $product->validade
+                ],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(200);
+        } else {
+            $retorno = [
+                'Produtos' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400);
+        }
+
+        echo json_encode($retorno, JSON_PRETTY_PRINT);
         break;
 
     case "PATCH":
-        // Implementar PATCH aqui
-        break;
+        $id = getIdFromRequest();
+        if ($id) {
+            $product = new Product($id);
+            
+            $product->toggleStatus();
+            
+            $retorno = [
+                'Produtos' => [
+                    'id' => $product->id,
+                    'status' => $product->status
+                ],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(200);
+        } else {
+            $retorno = [
+                'Produtos' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400);
+        }
 
-    case "DELETE":
-        // Implementar DELETE aqui
+        echo json_encode($retorno, JSON_PRETTY_PRINT);
         break;
 
     default:

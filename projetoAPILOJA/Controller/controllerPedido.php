@@ -5,21 +5,50 @@ header('Content-Type: application/json');
 require_once '../Model/PedidoModel.php';
 require_once '../Model/Utilidades/Resposta.php';
 
-// Início da sessão
+// Função para converter as chaves do array para minúsculas
+function arrayKeysToLower($array) {
+    $result = [];
+    foreach ($array as $key => $value) {
+        if (is_array($value)) {
+            $result[strtolower($key)] = arrayKeysToLower($value);
+        } else {
+            $result[strtolower($key)] = $value;
+        }
+    }
+    return $result;
+}
 
+// Função para obter o ID da URL ou do corpo da requisição
+function getIdFromRequest() {
+    global $input;
+    $id = isset($_GET['id']) ? intval($_GET['id']) : null;
+    if (!$id && isset($input['id']) && is_numeric($input['id'])) {
+        $id = intval($input['id']);
+    }
+    return $id;
+}
+
+// Lê o corpo da requisição e converte as chaves para minúsculas se não for null
+$input = json_decode(file_get_contents('php://input'), true);
+if ($input) {
+    $input = arrayKeysToLower($input);
+}
+
+// Início da sessão
 switch ($_SERVER['REQUEST_METHOD']) {
     case "GET":
+        $id = getIdFromRequest();
         $pedido = new Pedido();
-        if (isset($_GET['id'])) {
-            $id = htmlspecialchars($_GET['id']);
-            $pedidoData = $pedido->get($id); // Presumindo que `get` retorna dados do pedido como um array
+
+        if ($id) {
+            $pedidoData = $pedido->get($id);
 
             if ($pedidoData) {
                 $retorno = [
-                    'Pedidos' => [$pedidoData], // Coloca o pedido em um array para manter a consistência
+                    'Pedidos' => [$pedidoData],
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true) // Usa json_decode para obter um array associativo
+                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
                     ]
                 ];
             } else {
@@ -27,21 +56,19 @@ switch ($_SERVER['REQUEST_METHOD']) {
                     'Pedidos' => [],
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true) // Código 404 para não encontrado
+                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true)
                     ]
                 ];
             }
         } else {
-            // Se não houver ID, você pode implementar a lógica para obter todos os pedidos, se necessário.
-            // Suponha que você tenha um método getAll() em Pedido que retorna todos os pedidos.
-            $pedidosData = $pedido->getAll(); // Obtém todos os pedidos
+            $pedidosData = $pedido->getAll();
 
-            if (!empty($pedidosData)) {
+            if (is_array($pedidosData) && !empty($pedidosData)) {
                 $retorno = [
-                    'Pedidos' => $pedidosData, // Coloca todos os pedidos em um array
+                    'Pedidos' => $pedidosData,
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true) // Código 200 para OK
+                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
                     ]
                 ];
             } else {
@@ -49,7 +76,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
                     'Pedidos' => [],
                     'Informacoes' => [
                         'Método de requisição' => $_SERVER['REQUEST_METHOD'],
-                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true) // Código 404 para não encontrado
+                        'Resposta' => json_decode(Resposta::construirResp(404)->exibirResposta(), true)
                     ]
                 ];
             }
@@ -58,8 +85,132 @@ switch ($_SERVER['REQUEST_METHOD']) {
         break;
 
     case "POST":
-        
+        // Verifica se os dados esperados estão presentes
+        if (isset($input['id_cliente']) && isset($input['data'])) {
+            $pedido = new Pedido(
+                null, // id_pedido será gerado automaticamente
+                intval($input['id_cliente']),
+                htmlspecialchars($input['data']),
+                null // status não é passado no POST
+            );
+
+            $pedido->post();
+
+            $retorno = [
+                'Pedidos' => [
+                    'id_pedido' => $pedido->id_pedido,
+                    'id_cliente' => $pedido->id_cliente,
+                    'data' => $pedido->data,
+                    'status' => $pedido->status
+                ],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(201)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(201); // Define o código de resposta HTTP para criação
+        } else {
+            $retorno = [
+                'Pedidos' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400); // Define o código de resposta HTTP para solicitação inválida
+        }
+
+        echo json_encode($retorno, JSON_PRETTY_PRINT);
         break;
+
+        case "PUT":
+            $id = getIdFromRequest();
+            if ($id <= 0) {
+                $retorno = [
+                    'Pedidos' => [],
+                    'Informacoes' => [
+                        'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                        'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                    ]
+                ];
+                http_response_code(400);
+                echo json_encode($retorno, JSON_PRETTY_PRINT);
+                break;
+            }
+    
+            // Verifica se os dados esperados estão presentes
+            if (isset($input['id_cliente']) && isset($input['data'])) {
+                $pedido = new Pedido(
+                    $id,
+                    intval($input['id_cliente']),
+                    htmlspecialchars($input['data'])
+                    // O status não é necessário aqui
+                );
+    
+                $pedido->update();
+    
+                // Recarrega o pedido para garantir que o status atualizado seja retornado
+                $pedidoAtualizado = $pedido->get($id);
+    
+                $retorno = [
+                    'Pedidos' => [
+                        'id_pedido' => $pedidoAtualizado['id_pedido'],
+                        'id_cliente' => $pedidoAtualizado['id_cliente'],
+                        'data' => $pedidoAtualizado['data'],
+                        'status' => $pedidoAtualizado['status'] // Inclua o status na resposta
+                    ],
+                    'Informacoes' => [
+                        'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                        'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
+                    ]
+                ];
+                http_response_code(200);
+            } else {
+                $retorno = [
+                    'Pedidos' => [],
+                    'Informacoes' => [
+                        'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                        'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                    ]
+                ];
+                http_response_code(400);
+            }
+    
+            echo json_encode($retorno, JSON_PRETTY_PRINT);
+            break;
+
+    case "PATCH":
+        $id = getIdFromRequest();
+        if ($id) {
+            $pedido = new Pedido($id);
+
+            $pedido->toggleStatus();
+
+            $retorno = [
+                'Pedidos' => [
+                    'id_pedido' => $pedido->id_pedido,
+                    'status' => $pedido->status
+                ],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(200)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(200);
+        } else {
+            $retorno = [
+                'Pedidos' => [],
+                'Informacoes' => [
+                    'Método de requisição' => $_SERVER['REQUEST_METHOD'],
+                    'Resposta' => json_decode(Resposta::construirResp(400)->exibirResposta(), true)
+                ]
+            ];
+            http_response_code(400);
+        }
+
+        echo json_encode($retorno, JSON_PRETTY_PRINT);
+        break;
+
     default:
         $resposta = [
             'Pedidos' => [],
