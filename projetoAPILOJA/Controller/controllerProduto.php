@@ -28,9 +28,15 @@ function getIdFromRequest() {
     return $id;
 }
 
-// Lê o corpo da requisição e converte as chaves para minúsculas
+// Lê o corpo da requisição
 $input = json_decode(file_get_contents('php://input'), true);
-$input = arrayKeysToLower($input);
+
+// Verifica se $input é um array e não está vazio
+if (is_array($input) && !empty($input)) {
+    $input = arrayKeysToLower($input);
+} else {
+    $input = []; // Se estiver vazio, define como um array vazio
+}
 
 // Início da sessão
 switch ($_SERVER['REQUEST_METHOD']) {
